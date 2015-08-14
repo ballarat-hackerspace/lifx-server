@@ -67,3 +67,8 @@ post '/*' do
   return_message[:status] = 'bad route'
   return_message.to_json
 end
+
+before do
+  content_type 'application/json'
+  headers 'Access-Control-Allow-Origin' => '*'
+end

@@ -30,20 +30,23 @@ get '/bulbs' do
   return_message.to_json
 end
 
+# return current colour of first bulb
 get '/colour' do
   return_message = {}
   lights = c.lights.to_a
-  clr = lights[0].color(refresh: true)
-  return_message[:h] = clr.hue
-  return_message[:s] = clr.saturation
-  return_message[:b] = clr.brightness
-  return_message[:k] = clr.kelvin
-  return_message.to_json
-end
-
-get '/bulbs' do
-  return_message = {}
-  return_message[:status] = 'unfinished'
+  if lights[0].on?
+    begin
+      clr = lights[0].color(refresh: true)
+      return_message[:h] = clr.hue
+      return_message[:s] = clr.saturation
+      return_message[:b] = clr.brightness
+      return_message[:k] = clr.kelvin
+    rescue LIFX::Light::MessageTimeout
+      return_message[:status] = "lights timed out"
+    end
+  else
+    return_message[:status] = "lights off"
+  end
   return_message.to_json
 end
 
@@ -60,7 +63,11 @@ post '/hsbk' do
       else
         d = 5
       end
-      c.lights.set_color(colour, duration: d).turn_on
+      if jdata[:b] == 0
+        c.lights.set_color(colour, duration: 0).turn_off
+      else
+        c.lights.set_color(colour, duration: d).turn_on
+      end
       return_message[:status] = 'ok'
     else
       return_message[:status] = 'incorrect arguments'

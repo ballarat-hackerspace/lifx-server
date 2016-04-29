@@ -18,7 +18,8 @@ begin
     c.lights.count == num_bulbs;
   end
 rescue
-  raise "Failed to discover required bulbs (#{c.lights.count}/#{num_bulbs})"
+  print " *** Failed to discover required bulbs (#{c.lights.count}/#{num_bulbs})"
+  print " *** We'll continue on with what we found."
 end
 
 print "Found #{c.lights.count} bulb(s) to control\n"
@@ -68,6 +69,36 @@ post '/hsbk' do
       else
         c.lights.set_color(colour, duration: d).turn_on
       end
+      return_message[:status] = 'ok'
+    else
+      return_message[:status] = 'incorrect arguments'
+    end
+  rescue TypeError
+    return_message[:status] = 'invalid payload'
+  rescue JSON::ParserError
+    return_message[:status] = 'invalid json'
+  end
+  return_message.to_json
+end
+
+# Public URL, enforce slow changes and not too brite
+post '/change' do
+  return_message = {}
+  begin
+    jdata = JSON.parse(params[:colour],:symbolize_names => true)
+    if jdata.has_key?(:hue)
+      hue = jdata[:hue]
+      sat = 1.0
+      bri = 0.2
+      if jdata[:hue] < 0
+        bri = 0.0
+      end
+      if jdata[:hue] > 360
+        sat = 0.0
+      end
+      colour = LIFX::Color.hsbk(hue, sat, bri, 3500)
+      d = 3
+      c.lights.set_color(colour, duration: d).turn_on
       return_message[:status] = 'ok'
     else
       return_message[:status] = 'incorrect arguments'
